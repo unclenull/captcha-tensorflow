@@ -15,7 +15,7 @@ META_FILENAME = 'meta.json'
 
 def get_choices():
     choices = [
-        (FLAGS.digit, map(str, range(10))),
+        (FLAGS.digit, string.digits),
         (FLAGS.lower, string.ascii_lowercase),
         (FLAGS.upper, string.ascii_uppercase),
         ]
@@ -65,7 +65,7 @@ def gen_dataset():
     print('%s choices: %s' % (len(choices), ''.join(choices) or None))
 
     _gen_captcha(build_file_path('train'), num_per_image, n_epoch, width, height, choices=choices)
-    _gen_captcha(build_file_path('test'), num_per_image, max(1, int(n_epoch * test_ratio)), width, height, choices=choices)
+    # _gen_captcha(build_file_path('test'), num_per_image, max(1, int(n_epoch * test_ratio)), width, height, choices=choices)
 
     meta_filename = build_file_path(META_FILENAME)
     with open(meta_filename, 'w') as f:

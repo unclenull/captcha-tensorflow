@@ -23,8 +23,8 @@ def main(_):
     print('label_size: %s, image_size: %s' % (LABEL_SIZE, IMAGE_SIZE))
 
     # variable in the graph for input data
-    x = tf.placeholder(tf.float32, [None, IMAGE_SIZE])
-    y_ = tf.placeholder(tf.float32, [None, LABEL_SIZE])
+    x = tf.compat.v1.placeholder(tf.float32, [None, IMAGE_SIZE])
+    y_ = tf.compat.v1.placeholder(tf.float32, [None, LABEL_SIZE])
 
     # define the model
     W = tf.Variable(tf.zeros([IMAGE_SIZE, LABEL_SIZE]))
@@ -32,20 +32,20 @@ def main(_):
     y = tf.matmul(x, W) + b
 
     # Define loss and optimizer
-    diff = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y)
-    cross_entropy = tf.reduce_mean(diff)
-    train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
+    diff = tf.nn.softmax_cross_entropy_with_logits(labels=tf.stop_gradient(y_), logits=y)
+    cross_entropy = tf.reduce_mean(input_tensor=diff)
+    train_step = tf.compat.v1.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
 
     # forword prop
-    predict = tf.argmax(y, axis=1)
-    expect = tf.argmax(y_, axis=1)
+    predict = tf.argmax(input=y, axis=1)
+    expect = tf.argmax(input=y_, axis=1)
 
     # evaluate accuracy
     correct_prediction = tf.equal(predict, expect)
-    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+    accuracy = tf.reduce_mean(input_tensor=tf.cast(correct_prediction, tf.float32))
 
-    with tf.Session() as sess:
-        tf.global_variables_initializer().run()
+    with tf.compat.v1.Session() as sess:
+        tf.compat.v1.global_variables_initializer().run()
 
         # Train
         for i in range(MAX_STEPS):
@@ -67,4 +67,4 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', type=str, default='images/char-1-epoch-2000/',
                         help='Directory for storing input data')
     FLAGS, unparsed = parser.parse_known_args()
-    tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
+    tf.compat.v1.app.run(main=main, argv=[sys.argv[0]] + unparsed)

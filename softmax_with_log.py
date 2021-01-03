@@ -17,15 +17,15 @@ FLAGS = None
 
 def variable_summaries(var):
     """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
-    with tf.name_scope('summaries'):
-        mean = tf.reduce_mean(var)
-        tf.summary.scalar('mean', mean)
-        with tf.name_scope('stddev'):
-            stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
-        tf.summary.scalar('stddev', stddev)
-        tf.summary.scalar('max', tf.reduce_max(var))
-        tf.summary.scalar('min', tf.reduce_min(var))
-        tf.summary.histogram('histogram', var)
+    with tf.compat.v1.name_scope('summaries'):
+        mean = tf.reduce_mean(input_tensor=var)
+        tf.compat.v1.summary.scalar('mean', mean)
+        with tf.compat.v1.name_scope('stddev'):
+            stddev = tf.sqrt(tf.reduce_mean(input_tensor=tf.square(var - mean)))
+        tf.compat.v1.summary.scalar('stddev', stddev)
+        tf.compat.v1.summary.scalar('max', tf.reduce_max(input_tensor=var))
+        tf.compat.v1.summary.scalar('min', tf.reduce_min(input_tensor=var))
+        tf.compat.v1.summary.histogram('histogram', var)
 
 
 def main(_):
@@ -40,55 +40,55 @@ def main(_):
     print('label_size: %s, image_size: %s' % (LABEL_SIZE, IMAGE_SIZE))
 
     # variable in the graph for input data
-    with tf.name_scope('input'):
-        x = tf.placeholder(tf.float32, [None, IMAGE_SIZE])
-        y_ = tf.placeholder(tf.float32, [None, LABEL_SIZE])
+    with tf.compat.v1.name_scope('input'):
+        x = tf.compat.v1.placeholder(tf.float32, [None, IMAGE_SIZE])
+        y_ = tf.compat.v1.placeholder(tf.float32, [None, LABEL_SIZE])
         variable_summaries(x)
         variable_summaries(y_)
 
         # must be 4-D with shape `[batch_size, height, width, channels]`
         images_shaped_input = tf.reshape(x, [-1, IMAGE_HEIGHT, IMAGE_WIDTH, 1])
-        tf.summary.image('input', images_shaped_input, max_outputs=LABEL_SIZE*2)
+        tf.compat.v1.summary.image('input', images_shaped_input, max_outputs=LABEL_SIZE*2)
 
     # define the model
     # Adding a name scope ensures logical grouping of the layers in the graph.
-    with tf.name_scope('linear_model'):
-        with tf.name_scope('W'):
+    with tf.compat.v1.name_scope('linear_model'):
+        with tf.compat.v1.name_scope('W'):
             W = tf.Variable(tf.zeros([IMAGE_SIZE, LABEL_SIZE]))
             variable_summaries(W)
-        with tf.name_scope('b'):
+        with tf.compat.v1.name_scope('b'):
             b = tf.Variable(tf.zeros([LABEL_SIZE]))
             variable_summaries(b)
-        with tf.name_scope('y'):
+        with tf.compat.v1.name_scope('y'):
             y = tf.matmul(x, W) + b
-            tf.summary.histogram('y', y)
+            tf.compat.v1.summary.histogram('y', y)
 
     # Define loss and optimizer
     # Returns:
     # A 1-D `Tensor` of length `batch_size`
     # of the same type as `logits` with the softmax cross entropy loss.
-    with tf.name_scope('loss'):
-        diff = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y)
-        cross_entropy = tf.reduce_mean(diff)
-        train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
+    with tf.compat.v1.name_scope('loss'):
+        diff = tf.nn.softmax_cross_entropy_with_logits(labels=tf.stop_gradient(y_), logits=y)
+        cross_entropy = tf.reduce_mean(input_tensor=diff)
+        train_step = tf.compat.v1.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
         variable_summaries(diff)
 
     # forword prop
-    predict = tf.argmax(y, axis=1)
-    expect = tf.argmax(y_, axis=1)
+    predict = tf.argmax(input=y, axis=1)
+    expect = tf.argmax(input=y_, axis=1)
 
     # evaluate accuracy
-    with tf.name_scope('evaluate_accuracy'):
+    with tf.compat.v1.name_scope('evaluate_accuracy'):
         correct_prediction = tf.equal(predict, expect)
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+        accuracy = tf.reduce_mean(input_tensor=tf.cast(correct_prediction, tf.float32))
         variable_summaries(accuracy)
 
-    with tf.Session() as sess:
+    with tf.compat.v1.Session() as sess:
 
-        merged = tf.summary.merge_all()
-        train_writer = tf.summary.FileWriter(LOG_DIR + '/train', sess.graph)
+        merged = tf.compat.v1.summary.merge_all()
+        train_writer = tf.compat.v1.summary.FileWriter(LOG_DIR + '/train', sess.graph)
 
-        tf.global_variables_initializer().run()
+        tf.compat.v1.global_variables_initializer().run()
 
         # Train
         for i in range(MAX_STEPS):
@@ -115,4 +115,4 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', type=str, default='images/char-1-epoch-2000/',
                         help='Directory for storing input data')
     FLAGS, unparsed = parser.parse_known_args()
-    tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
+    tf.compat.v1.app.run(main=main, argv=[sys.argv[0]] + unparsed)

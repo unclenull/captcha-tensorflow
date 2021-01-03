@@ -16,9 +16,9 @@ FLAGS = None
 
 def variable_summaries(var):
     """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
-    with tf.name_scope('summaries'):
-        mean = tf.reduce_mean(var)
-        tf.summary.scalar('mean', mean)
+    with tf.compat.v1.name_scope('summaries'):
+        mean = tf.reduce_mean(input_tensor=var)
+        tf.compat.v1.summary.scalar('mean', mean)
         # with tf.name_scope('stddev'):
         #    stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
         # tf.summary.scalar('stddev', stddev)
@@ -28,7 +28,7 @@ def variable_summaries(var):
 
 
 def weight_variable(shape):
-    initial = tf.truncated_normal(shape, stddev=0.1)
+    initial = tf.random.truncated_normal(shape, stddev=0.1)
     return tf.Variable(initial)
 
 
@@ -38,11 +38,11 @@ def bias_variable(shape):
 
 
 def conv2d(x, W):
-    return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
+    return tf.nn.conv2d(input=x, filters=W, strides=[1, 1, 1, 1], padding='SAME')
 
 
 def max_pool_2x2(x):
-    return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
+    return tf.nn.max_pool2d(input=x, ksize=[1, 2, 2, 1],
                           strides=[1, 2, 2, 1], padding='SAME')
 
 
@@ -60,48 +60,48 @@ def main(_):
     print('label_size: %s, image_size: %s' % (LABEL_SIZE, IMAGE_SIZE))
 
     # variable in the graph for input data
-    with tf.name_scope('input'):
-        x = tf.placeholder(tf.float32, [None, IMAGE_HEIGHT, IMAGE_WIDTH])
-        y_ = tf.placeholder(tf.float32, [None, NUM_PER_IMAGE * LABEL_SIZE])
+    with tf.compat.v1.name_scope('input'):
+        x = tf.compat.v1.placeholder(tf.float32, [None, IMAGE_HEIGHT, IMAGE_WIDTH])
+        y_ = tf.compat.v1.placeholder(tf.float32, [None, NUM_PER_IMAGE * LABEL_SIZE])
 
         # must be 4-D with shape `[batch_size, height, width, channels]`
         x_image = tf.reshape(x, [-1, IMAGE_HEIGHT, IMAGE_WIDTH, 1])
-        tf.summary.image('input', x_image, max_outputs=LABEL_SIZE)
+        tf.compat.v1.summary.image('input', x_image, max_outputs=LABEL_SIZE)
 
     # define the model
-    with tf.name_scope('convolution-layer-1'):
+    with tf.compat.v1.name_scope('convolution-layer-1'):
         W_conv1 = weight_variable([5, 5, 1, 32])
         b_conv1 = bias_variable([32])
 
         h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
         h_pool1 = max_pool_2x2(h_conv1)
 
-    with tf.name_scope('convolution-layer-2'):
+    with tf.compat.v1.name_scope('convolution-layer-2'):
         W_conv2 = weight_variable([5, 5, 32, 64])
         b_conv2 = bias_variable([64])
 
         h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
         h_pool2 = max_pool_2x2(h_conv2)
 
-    with tf.name_scope('densely-connected'):
+    with tf.compat.v1.name_scope('densely-connected'):
         W_fc1 = weight_variable([IMAGE_WIDTH * IMAGE_HEIGHT * 4, 1024])
         b_fc1 = bias_variable([1024])
 
         h_pool2_flat = tf.reshape(h_pool2, [-1, IMAGE_WIDTH*IMAGE_HEIGHT*4])
         h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
 
-    with tf.name_scope('dropout'):
+    with tf.compat.v1.name_scope('dropout'):
         # To reduce overfitting, we will apply dropout before the readout layer
-        keep_prob = tf.placeholder(tf.float32)
-        h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
+        keep_prob = tf.compat.v1.placeholder(tf.float32)
+        h_fc1_drop = tf.nn.dropout(h_fc1, 1 - (keep_prob))
 
-    with tf.name_scope('readout'):
+    with tf.compat.v1.name_scope('readout'):
         W_fc2 = weight_variable([1024, NUM_PER_IMAGE * LABEL_SIZE])
         b_fc2 = bias_variable([NUM_PER_IMAGE * LABEL_SIZE])
 
         y_conv = tf.matmul(h_fc1_drop, W_fc2) + b_fc2
 
-    with tf.name_scope('reshape'):
+    with tf.compat.v1.name_scope('reshape'):
         y_expect_reshaped = tf.reshape(y_, [-1, NUM_PER_IMAGE, LABEL_SIZE])
         y_got_reshaped = tf.reshape(y_conv, [-1, NUM_PER_IMAGE, LABEL_SIZE])
 
@@ -109,30 +109,30 @@ def main(_):
     # Returns:
     # A 1-D `Tensor` of length `batch_size`
     # of the same type as `logits` with the softmax cross entropy loss.
-    with tf.name_scope('loss'):
+    with tf.compat.v1.name_scope('loss'):
         cross_entropy = tf.reduce_mean(
-            tf.nn.softmax_cross_entropy_with_logits(labels=y_expect_reshaped, logits=y_got_reshaped))
-        train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
+            input_tensor=tf.nn.softmax_cross_entropy_with_logits(labels=tf.stop_gradient(y_expect_reshaped), logits=y_got_reshaped))
+        train_step = tf.compat.v1.train.AdamOptimizer(1e-4).minimize(cross_entropy)
         variable_summaries(cross_entropy)
 
     # forword prop
-    with tf.name_scope('forword-prop'):
-        predict = tf.argmax(y_got_reshaped, axis=2)
-        expect = tf.argmax(y_expect_reshaped, axis=2)
+    with tf.compat.v1.name_scope('forword-prop'):
+        predict = tf.argmax(input=y_got_reshaped, axis=2)
+        expect = tf.argmax(input=y_expect_reshaped, axis=2)
 
     # evaluate accuracy
-    with tf.name_scope('evaluate_accuracy'):
+    with tf.compat.v1.name_scope('evaluate_accuracy'):
         correct_prediction = tf.equal(predict, expect)
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+        accuracy = tf.reduce_mean(input_tensor=tf.cast(correct_prediction, tf.float32))
         variable_summaries(accuracy)
 
-    with tf.Session() as sess:
+    with tf.compat.v1.Session() as sess:
 
-        merged = tf.summary.merge_all()
-        train_writer = tf.summary.FileWriter(LOG_DIR + '/train', sess.graph)
-        test_writer = tf.summary.FileWriter(LOG_DIR + '/test', sess.graph)
+        merged = tf.compat.v1.summary.merge_all()
+        train_writer = tf.compat.v1.summary.FileWriter(LOG_DIR + '/train', sess.graph)
+        test_writer = tf.compat.v1.summary.FileWriter(LOG_DIR + '/test', sess.graph)
 
-        tf.global_variables_initializer().run()
+        tf.compat.v1.global_variables_initializer().run()
 
         # Train
         for i in range(MAX_STEPS):
@@ -167,4 +167,4 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', type=str, default='images/char-1-epoch-2000/',
                         help='Directory for storing input data')
     FLAGS, unparsed = parser.parse_known_args()
-    tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
+    tf.compat.v1.app.run(main=main, argv=[sys.argv[0]] + unparsed)
